@@ -43,6 +43,8 @@ recap = recap_nan(df2)
 
 df2.columns
 #%%
+df = pd.read_csv('CSV/clean_orange.csv',low_memory=False)
+
 def pre_process(df2):
     """
         Fonction de pré-processing qui enlève les EAN des produit taggés 'ALIENATION' et FDV EFFECTIVE
@@ -55,7 +57,7 @@ def pre_process(df2):
             
         Requirements : - CSV 'EANs par famille 20190415.xlsx' tel quel
             
-        Output : Dataframe sans les EAN alienatio et fdv effective , avec colonne weekday et week_number et mois de la vente
+        Output : Dataframe sans les EAN alienation et fdv effective , avec colonne weekday et week_number et mois de la vente
     """
     df2 = df2.drop(columns=['Unnamed: 0'])
     ean_fam_file_path = './CSV/EANs par famille 20190415.xlsx'
@@ -82,21 +84,70 @@ def pre_process(df2):
     df2 = df2.drop(columns=['Libellé Sous Famille'])
     df2['Weekday'] = df2['Journée de la Vente'].apply(lambda x: x.weekday())
     df2['Week_number'] = df2['Journée de la Vente'].apply(lambda x: x.strftime("%V"))
+    df2['Week_number'] = df2['Week_number'].astype('int')
+    df2['Day_number'] = df2['Journée de la Vente'].apply(lambda x: x.day())
+    df2['Day_number'] = df2['Day_number'].astype('int')
+    
     return df2
 
 df = pre_process(df)
 #%%
+df['Journée de la Vente'] = pd.to_datetime(df['Journée de la Vente'])
+df['Week_number'] = df['Journée de la Vente'].apply(lambda x: x.strftime("%V"))
+df['Week_number'] = df['Week_number'].astype('int')
+dfs = pd.DataFrame(df.groupby(['Code Produit (EAN)','Week_number'])['Nombre de produits vendus'].sum()).reset_index(level=[0,1])
+dfp = pd.read_csv('CSV/produits_code.csv')
+dfp = dfp.drop(columns=['Unnamed: 0'])
+def find_libelle(code):
+    libelle = dfp[dfp['code'] == code]['libelle'].values[0]
+    libelle = libelle.replace( "[" ,"")
+    libelle = libelle.replace( "]" ,"")
+    libelle = libelle.replace( "'" ,"")
+    return libelle
+
+libelle = find_libelle(8562014527)
+dfs['Libelle'] = dfs['Code Produit (EAN)'].apply(lambda x: find_libelle(x))
+############ TEST  ###########################
+
+from sklearn.feature_extraction.text import CountVectorizer
+vectorizer = CountVectorizer()
+X = vectorizer.fit_transform(dfs['Libelle'])
 
 
-df2.columns
+vect = pd.DataFrame(data = X.toarray(), columns = vectorizer.get_feature_names())
+df_final = pd.concat([dfs, vect], axis=1)
+df_final = df_final.drop(columns=['Code Produit (EAN)','Libelle'])
 
+list_x = list(df_final.columns)
+list_x.remove('Nombre de produits vendus')
 
+X = df_final[list_x]
+y = df_final['Nombre de produits vendus']  
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33)
 
+from sklearn.ensemble import RandomForestRegressor
+regr = RandomForestRegressor(max_depth=2, n_estimators=200)
+regr.fit(X_train,y_train)
 
+regr.score(X_test,y_test)
+#df['Journée de la Vente'].dtype
+#%%
 
-
-df = df2  ####### KEEP DF W/O DUMMIES TO TEST RANDOM FOREST
-
+df2 = df  ####### COPY DF W/O DUMMIES TO DF2 TO TEST RANDOM FOREST
+def vectorize_libelle(dataframe):
+    """
+        Fonction de vectorisation du nom de produit
+        
+        Input : Dataframe avec une colonne 'Libellé Produit'
+        
+        Output : Dataframe avec colonne 'Libellé Produit' remplacée par la vectorisation 
+    """
+    from sklearn.feature_extraction.text import CountVectorizer
+    vectorizer = CountVectorizer()
+    X = vectorizer.fit_transform(corpus)
+    
+    return dataframe
 #%%
 categoricals = ['Code Sous Famille','Code PDV','Libellé AD','Weekday']
 for col in categoricals:
@@ -120,7 +171,7 @@ from sklearn.model_selection import train_test_split
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=42)
   
 from sklearn.ensemble import RandomForestRegressor
-regr = RandomForestRegressor(max_depth=2, random_state=0,n_estimators=200)
+regr = RandomForestRegressor(max_depth=2, n_estimators=200)
 regr.fit(X_train,y_train)
 
 
