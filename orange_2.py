@@ -8,8 +8,8 @@ import pandas as pd
 
 df = pd.read_csv('orange_clean_v3.csv',low_memory=False)
 
-df2 = pd.read_csv('clean_orange.csv',low_memory=False)
-df2 = df2.drop(columns=['Unnamed: 0'])
+df2 = pd.read_csv('CSV/clean_orange.csv',low_memory=False)
+
 #%%
 df.memory_usage(deep=True) / 1024 ** 2
 
@@ -45,7 +45,7 @@ df2.columns
 #%%
 def pre_process(df2):
     """
-        Fonction de pré-processing
+        Fonction de pré-processing qui enlève les EAN des produit taggés 'ALIENATION' et FDV EFFECTIVE
         
         Input : Dataframe avec colonnes : 'Mois de la Vente', 'Journée de la Vente', 'Libellé AD', 'Code PDV',
             'Libellé PDV', 'Code Sous Famille', 'Libellé Sous Famille',
@@ -55,12 +55,12 @@ def pre_process(df2):
             
         Requirements : - CSV 'EANs par famille 20190415.xlsx' tel quel
             
-        Output : Dataframe
+        Output : Dataframe sans les EAN alienatio et fdv effective , avec colonne weekday et week_number et mois de la vente
     """
+    df2 = df2.drop(columns=['Unnamed: 0'])
+    ean_fam_file_path = './CSV/EANs par famille 20190415.xlsx'
     
-    ean_fam_file_path
-    
-    df_ean = pd.read_excel('EANs par famille 20190415.xlsx')
+    df_ean = pd.read_excel(ean_fam_file_path)
     ean_to_drop = df_ean[df_ean['Statut du cycle de vie'] != 'ALIENATION']
     ean_to_drop = ean_to_drop[ean_to_drop['Statut du cycle de vie'] != 'FDV EFFECTIVE']
     ean_to_keep = ean_to_drop[ean_to_drop['Statut du cycle de vie'] != 'ANNULEE'] # LOL
@@ -71,23 +71,24 @@ def pre_process(df2):
     df2['Mois de la Vente'] = df2['Journée de la Vente'].dt.month
     
     ean_to_keep = list(ean_to_keep['EAN'])
-    df2 = df2[df2['Code produit (EAN)'] in ean_to_keep]
+
     def isinlist(row):
         if row in ean_to_keep:
             return True
         else:
             return False
     df2 = df2[df2['Code Produit (EAN)'].apply(isinlist)]
-    df2 = df2.drop(columns=['Code Produit (EAN)'])
+    #df2 = df2.drop(columns=['Code Produit (EAN)'])
     df2 = df2.drop(columns=['Libellé Sous Famille'])
     df2['Weekday'] = df2['Journée de la Vente'].apply(lambda x: x.weekday())
+    df2['Week_number'] = df2['Journée de la Vente'].apply(lambda x: x.strftime("%V"))
     return df2
 
 df3 = pre_process(df2)
 #%%
 
 
-
+df2.columns
 
 
 
