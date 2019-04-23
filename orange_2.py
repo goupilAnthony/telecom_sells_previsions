@@ -6,9 +6,9 @@ Ceci est un script temporaire.
 """
 import pandas as pd
 
-df = pd.read_csv('orange_clean_v3.csv',low_memory=False)
+#df = pd.read_csv('orange_clean_v3.csv',low_memory=False)
 
-df2 = pd.read_csv('CSV/clean_orange.csv',low_memory=False)
+df = pd.read_csv('CSV/clean_orange.csv',low_memory=False)
 
 #%%
 df.memory_usage(deep=True) / 1024 ** 2
@@ -84,7 +84,7 @@ def pre_process(df2):
     df2['Week_number'] = df2['Journée de la Vente'].apply(lambda x: x.strftime("%V"))
     return df2
 
-df3 = pre_process(df2)
+df = pre_process(df)
 #%%
 
 
